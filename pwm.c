@@ -8,7 +8,6 @@
 static nrfx_pwm_t m_pwm0 = NRFX_PWM_INSTANCE(0);
 
 #define PWM_TOP_VALUE 16000
-#define PWM_DUTY_VALUE 1000
 
 static nrf_pwm_values_individual_t  pwm_values[] =
 {
@@ -30,7 +29,7 @@ static nrf_pwm_sequence_t const pwm_sequence =
 
 APP_TIMER_DEF(pwm_timer);
 
-#define PWM_STEP 100
+#define PWM_STEP 400
 #define PWM_INTERVAL APP_TIMER_TICKS(10)
 
 static uint16_t current_duty = 0;
@@ -152,17 +151,6 @@ void pwm_set_duty(uint16_t duty)
             pwm_values[0].channel_3 = value;
             break;
     }
-}
-
-void pwm_set_led(uint8_t led)
-{
-    if (led >= 4)
-    {
-        return;
-    }
-
-    current_led = led;
-    pwm_set_duty(current_duty);
 }
 
 void pwm_ramp_start(void)
