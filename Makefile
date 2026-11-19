@@ -173,7 +173,7 @@ $(DFU_PACKAGE): $(OUTPUT_DIRECTORY)/nrf52840_xxaa.hex
 	nrfutil pkg generate \
 		--hw-version 52 \
 		--application-version 1 \
-		--sd-req 0x0,0x102 \
+		--sd-req 0x102 \
 		--sd-id 0x102 \
 		--application $< \
 		$@

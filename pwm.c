@@ -3,6 +3,10 @@
 #include "app_error.h"
 #include "leds.h"
 #include "app_timer.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+#include "nrf_log_backend_usb.h"
 #include <stdint.h>
 
 static nrfx_pwm_t m_pwm0 = NRFX_PWM_INSTANCE(0);
@@ -61,6 +65,10 @@ static void pwm_timer_handler(void * p_context)
         {
             direction = 1;
             completed_cycles++;
+            NRF_LOG_INFO("Current led: %d, completed cycles: %d/%d",
+             current_led,
+             completed_cycles,
+             led_cycles[current_led]);
 
             if (completed_cycles >= led_cycles[current_led])
             {
@@ -155,10 +163,12 @@ void pwm_set_duty(uint16_t duty)
 
 void pwm_ramp_start(void)
 {
+    NRF_LOG_INFO("pwm_ramp_start");
     app_timer_start(pwm_timer, PWM_INTERVAL, NULL);
 }
 
 void pwm_ramp_stop(void)
 {
+    NRF_LOG_INFO("pwm_ramp_stop");
     app_timer_stop(pwm_timer);
 }

@@ -5,6 +5,10 @@
 #include "app_error.h"
 #include "app_timer.h"
 #include "pwm.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+#include "nrf_log_backend_usb.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -15,6 +19,9 @@ APP_TIMER_DEF(double_click_timer);
 
 static volatile uint8_t click_count = 0;
 static volatile bool sequence_running = false;
+
+static uint32_t last_press_time = 0;
+static bool debounce_initialized = false;
 
 static void double_click_timeout(void * p_context)
 {
@@ -32,18 +39,30 @@ static void button_handler(nrfx_gpiote_pin_t pin,
         return;
     }
 
+    uint32_t now = app_timer_cnt_get();
+
+    if (debounce_initialized &&
+        app_timer_cnt_diff_compute(now, last_press_time) < APP_TIMER_TICKS(50))
+    {
+        NRF_LOG_INFO("Debounced");
+        return;
+    }
+
+    debounce_initialized = true;
+    last_press_time = now;
+
+    NRF_LOG_INFO("Click");
+
     click_count++;
 
     if (click_count == 1)
     {
-        app_timer_start(
-            double_click_timer,
-            APP_TIMER_TICKS(400),
-            NULL
-        );
+        app_timer_start(double_click_timer, APP_TIMER_TICKS(400), NULL);
     }
     else if (click_count == 2)
     {
+        NRF_LOG_INFO("Double click");
+
         app_timer_stop(double_click_timer);
         click_count = 0;
 

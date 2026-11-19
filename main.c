@@ -51,18 +51,5 @@ int main(void)
 
     while (true)
     {
-        LOG_BACKEND_USB_PROCESS();
-        NRF_LOG_PROCESS();
-
-        static uint32_t counter = 0;
-        static uint32_t last_log = 0;
-
-        if (counter - last_log >= 1000000)
-        {
-            last_log = counter;
-            NRF_LOG_INFO("USB logging test");
-        }
-
-        counter++;
     }
 }
