@@ -50,6 +50,8 @@ int main(void)
     NRF_LOG_INFO("Button initialized");
 
     while (true)
-    {
-    }
+{
+    LOG_BACKEND_USB_PROCESS();
+    NRF_LOG_PROCESS();
+}
 }
