@@ -1,4 +1,3 @@
-
 #include "button.h"
 #include "nrf_gpio.h"
 #include "nrfx_gpiote.h"
@@ -16,17 +15,29 @@
 #define IS_PRESSED 0
 
 APP_TIMER_DEF(double_click_timer);
+APP_TIMER_DEF(debounce_timer);
 
 static volatile uint8_t click_count = 0;
 static volatile bool sequence_running = false;
-
-static uint32_t last_press_time = 0;
-static bool debounce_initialized = false;
 
 static void double_click_timeout(void * p_context)
 {
     (void)p_context;
     click_count = 0;
+}
+
+static void debounce_timeout(void * p_context)
+{
+    (void)p_context;
+
+    if (nrf_gpio_pin_read(BUTTON_1) == IS_PRESSED)
+    {
+        ret_code_t err_code = app_timer_start(debounce_timer, APP_TIMER_TICKS(50), NULL);
+        APP_ERROR_CHECK(err_code);
+        return;
+    }
+
+    nrfx_gpiote_in_event_enable(BUTTON_1, true);
 }
 
 static void button_handler(nrfx_gpiote_pin_t pin,
@@ -39,17 +50,9 @@ static void button_handler(nrfx_gpiote_pin_t pin,
         return;
     }
 
-    uint32_t now = app_timer_cnt_get();
-
-    if (debounce_initialized &&
-        app_timer_cnt_diff_compute(now, last_press_time) < APP_TIMER_TICKS(50))
-    {
-        NRF_LOG_INFO("Debounced");
-        return;
-    }
-
-    debounce_initialized = true;
-    last_press_time = now;
+    nrfx_gpiote_in_event_disable(BUTTON_1);
+    ret_code_t err_code = app_timer_start(debounce_timer, APP_TIMER_TICKS(50), NULL);
+    APP_ERROR_CHECK(err_code);
 
     NRF_LOG_INFO("Click");
 
@@ -90,11 +93,17 @@ void button_init(void)
     );
     APP_ERROR_CHECK(err_code);
 
+    err_code = app_timer_create(
+        &debounce_timer,
+        APP_TIMER_MODE_SINGLE_SHOT,
+        debounce_timeout
+    );
+    APP_ERROR_CHECK(err_code);
+
     err_code = nrfx_gpiote_init();
     APP_ERROR_CHECK(err_code);
 
-    nrfx_gpiote_in_config_t config =
-        NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
+    nrfx_gpiote_in_config_t config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
 
     config.pull = NRF_GPIO_PIN_PULLUP;
 
