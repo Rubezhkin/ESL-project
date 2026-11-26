@@ -61,7 +61,6 @@ static uint16_t indicator_off(void)
 
 static uint16_t indicator_on(void)
 {
-    /* Inverted output: 0 gives full on. */
     return 0x8000 | 0;
 }
 
@@ -111,7 +110,6 @@ static void update_rgb(void)
 {
     rgb_t rgb = hsv_to_rgb(current_hue, current_saturation, current_brightness);
 
-    /* LED_2/3/4 are RGB channels on PCA10059. Pins are inverted in PWM config. */
     pwm_values[0].channel_1 = 0x8000 | (uint16_t)((100 - rgb.R) * PWM_TOP_VALUE / 100);
     pwm_values[0].channel_2 = 0x8000 | (uint16_t)((100 - rgb.G) * PWM_TOP_VALUE / 100);
     pwm_values[0].channel_3 = 0x8000 | (uint16_t)((100 - rgb.B) * PWM_TOP_VALUE / 100);
