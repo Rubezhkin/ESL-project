@@ -21,8 +21,8 @@ static nrfx_pwm_t m_pwm0 = NRFX_PWM_INSTANCE(0);
 #define SAT_STEP 1
 #define BRI_STEP 1
 
-#define SLOW_BLINK_TICKS 50  /* 500 ms at 10 ms timer */
-#define FAST_BLINK_TICKS 10  /* 100 ms at 10 ms timer */
+#define SLOW_BLINK_TICKS 50  
+#define FAST_BLINK_TICKS 10  
 
 static nrf_pwm_values_individual_t pwm_values[] =
 {
