@@ -7,6 +7,8 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_log_backend_usb.h"
+#include "color.h"
+#include "input_mode.h"
 #include <stdint.h>
 
 static nrfx_pwm_t m_pwm0 = NRFX_PWM_INSTANCE(0);
@@ -33,61 +35,55 @@ static nrf_pwm_sequence_t const pwm_sequence =
 
 APP_TIMER_DEF(pwm_timer);
 
-#define PWM_STEP 400
+#define PWM_STEP 200
 #define PWM_INTERVAL APP_TIMER_TICKS(10)
 
 static uint16_t current_duty = 0;
 static int8_t direction = 1;
 
-static uint8_t current_led = 0;
-
-static const uint8_t led_cycles[] = {6, 5, 9, 5};
-static uint8_t completed_cycles = 0;
+static uint16_t current_hue;
+static uint8_t current_saturation = 100;
+static uint8_t current_brightness = 100;
 
 static void pwm_timer_handler(void * p_context)
 {
     (void)p_context;
 
-    if (direction > 0)
-    {
-        if (current_duty >= PWM_TOP_VALUE)
-        {
-            direction = -1;
-        }
-        else
-        {
-            current_duty += PWM_STEP;
-        }
-    }
-    else
-    {
-        if (current_duty <= 0)
-        {
-            direction = 1;
-            completed_cycles++;
-            NRF_LOG_INFO("Current led: %d, completed cycles: %d/%d",
-             current_led,
-             completed_cycles,
-             led_cycles[current_led]);
-
-            if (completed_cycles >= led_cycles[current_led])
-            {
-                completed_cycles = 0;
-                current_led++;
-
-                if (current_led >= NUMBER_OF_LEDS)
-                {
-                    current_led = 0;
-                }
-            }
-        }
-        else
-        {
-            current_duty -= PWM_STEP;
-        }
-    }
+    set_duty();
 
     pwm_set_duty(current_duty);
+}
+
+void set_duty(void)
+{
+    switch (current_mode)
+    {
+        case MODE_IDLE:
+            current_duty = 0;
+            break;
+
+        case MODE_HUE:
+            current_duty += PWM_STEP * direction;
+            break;
+
+        case MODE_SATURATION:
+            current_duty += 2 * PWM_STEP * direction;
+            break;
+
+        case MODE_BRIGHTNESS:
+            current_duty = PWM_TOP_VALUE;
+            break;
+    }
+
+    if (current_duty >= PWM_TOP_VALUE)
+    {
+        current_duty = PWM_TOP_VALUE;
+        direction = -1;
+    }
+    else if (current_duty == 0)
+    {
+        direction = 1;
+    }
 }
 
 void pwm_init(void)
@@ -110,19 +106,35 @@ void pwm_init(void)
 };
 
     APP_ERROR_CHECK(nrfx_pwm_init(&m_pwm0, &config, NULL));
-	APP_ERROR_CHECK(
-    app_timer_create(
-        &pwm_timer,
-        APP_TIMER_MODE_REPEATED,
-        pwm_timer_handler
-    )
-);
+
+    current_hue = get_default_hue();
+    update_rgb();
+
     nrfx_pwm_simple_playback(
         &m_pwm0,
         &pwm_sequence,
         1,
         NRFX_PWM_FLAG_LOOP
     );
+
+    APP_ERROR_CHECK(
+    app_timer_create(
+        &pwm_timer,
+        APP_TIMER_MODE_REPEATED,
+        pwm_timer_handler
+    )
+    );
+
+    app_timer_start(pwm_timer, PWM_INTERVAL, NULL);
+}
+
+void update_rgb(void)
+{
+    rgb_t rgb = hsv_to_rgb(current_hue, current_saturation, current_brightness);
+    pwm_values[0].channel_0 = 0x8000 | PWM_TOP_VALUE;
+    pwm_values[0].channel_1 = 0x8000 | (100-rgb.R)*PWM_TOP_VALUE/100;
+    pwm_values[0].channel_2 = 0x8000 | (100-rgb.G)*PWM_TOP_VALUE/100;
+    pwm_values[0].channel_3 = 0x8000 | (100-rgb.B)*PWM_TOP_VALUE/100;
 }
 
 void pwm_set_duty(uint16_t duty)
@@ -132,43 +144,7 @@ void pwm_set_duty(uint16_t duty)
         duty = PWM_TOP_VALUE;
     }
 
-    uint16_t off = 0x8000 | PWM_TOP_VALUE;
-
-    pwm_values[0].channel_0 = off;
-    pwm_values[0].channel_1 = off;
-    pwm_values[0].channel_2 = off;
-    pwm_values[0].channel_3 = off;
-
     uint16_t value = 0x8000 | (PWM_TOP_VALUE - duty);
 
-    switch (current_led)
-    {
-        case 0:
-            pwm_values[0].channel_0 = value;
-            break;
-
-        case 1:
-            pwm_values[0].channel_1 = value;
-            break;
-
-        case 2:
-            pwm_values[0].channel_2 = value;
-            break;
-
-        case 3:
-            pwm_values[0].channel_3 = value;
-            break;
-    }
-}
-
-void pwm_ramp_start(void)
-{
-    NRF_LOG_INFO("pwm_ramp_start");
-    app_timer_start(pwm_timer, PWM_INTERVAL, NULL);
-}
-
-void pwm_ramp_stop(void)
-{
-    NRF_LOG_INFO("pwm_ramp_stop");
-    app_timer_stop(pwm_timer);
+    pwm_values[0].channel_0 = value;
 }

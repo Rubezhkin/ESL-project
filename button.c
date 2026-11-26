@@ -8,6 +8,7 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_log_backend_usb.h"
+#include "input_mode.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -18,7 +19,7 @@ APP_TIMER_DEF(double_click_timer);
 APP_TIMER_DEF(debounce_timer);
 
 static volatile uint8_t click_count = 0;
-static volatile bool sequence_running = false;
+static volatile bool button_is_pressed = false;
 
 static void double_click_timeout(void * p_context)
 {
@@ -69,16 +70,8 @@ static void button_handler(nrfx_gpiote_pin_t pin,
         app_timer_stop(double_click_timer);
         click_count = 0;
 
-        sequence_running = !sequence_running;
-
-        if (sequence_running)
-        {
-            pwm_ramp_start();
-        }
-        else
-        {
-            pwm_ramp_stop();
-        }
+        next_mode();
+        NRF_LOG_INFO("Mode: %d", (unsigned int)current_mode);
     }
 }
 

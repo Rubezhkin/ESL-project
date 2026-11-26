@@ -50,6 +50,8 @@ SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/button.c \
   $(PROJ_DIR)/pwm.c \
+  $(PROJ_DIR)/color.c \
+   $(PROJ_DIR)/input_mode.c \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
 
 # Include folders common to all targets
